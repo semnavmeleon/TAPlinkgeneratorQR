@@ -2,7 +2,7 @@
 
 Генератор QR-кодов с поддержкой стилизации, градиентов, логотипа и пресетов. Работает полностью в браузере — без сервера и сторонних запросов.
 
-![preview](https://i.imgur.com/placeholder.png)
+[![preview](https://i.imgur.com/placeholder.png)](https://imgur.com/j6vGRAT)
 
 ## Возможности
 
