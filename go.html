@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+var links = {
+  telegram:  'https://t.me/puerrito_shop',
+  site:      'https://puerrito.ru',
+  whatsapp:  'https://wa.me/79888477150',
+  vk:        'https://vk.com/puerrito',
+  email:     'mailto:mail@puerrito.ru'
+};
+var soon = { avito: true, ozon: true, wb: true };
+
+var key = new URLSearchParams(window.location.search).get('to') || '';
+if (links[key]) {
+  window.location.replace(links[key]);
+} else {
+  window.location.replace('https://link.puerrito.ru?notice=soon');
+}
+</script>
+</head>
+</html>
