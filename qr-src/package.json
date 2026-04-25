@@ -1,0 +1,13 @@
+{
+  "name": "qr-code-styling-custom",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "qrcode-generator": "^1.4.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "jsdom": "^29.0.2",
+    "typescript": "^5.6.0"
+  }
+}

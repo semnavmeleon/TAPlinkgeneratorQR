@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Generator</title>
+  <script src="qr-code-styling-custom.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #2563eb;
+      --accent-h: #1d4ed8;
+      --bg: #f0f2f5;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --border-h: #94a3b8;
+      --text: #0f172a;
+      --text-2: #475569;
+      --text-3: #94a3b8;
+      --green: #16a34a;
+      --red: #dc2626;
+      --r: 10px;
+      --r-sm: 6px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px 16px 48px;
+    }
+
+    /* ── Header ── */
+    .header {
+      max-width: 960px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-icon {
+      width: 38px; height: 38px;
+      background: var(--accent);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; line-height: 1.2; }
+    .header p { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 16px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    @media (max-width: 820px) {
+      .layout { grid-template-columns: 1fr; }
+      .preview-col { order: -1; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      overflow: hidden;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      padding: 11px 6px;
+      border: none; border-bottom: 2px solid transparent;
+      background: none;
+      font-size: 12px; font-weight: 600;
+      color: var(--text-3);
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.1px;
+    }
+    .tab:hover { color: var(--text-2); background: #f1f5f9; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); background: var(--surface); }
+
+    .tab-pane { display: none; padding: 20px; }
+    .tab-pane.active { display: block; }
+
+    /* ── Section header ── */
+    .sec {
+      font-size: 11px; font-weight: 700;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin: 18px 0 12px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sec:first-child { margin-top: 0; }
+
+    /* ── Field ── */
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .label {
+      display: block;
+      font-size: 12px; font-weight: 600;
+      color: var(--text-2);
+      margin-bottom: 5px;
+    }
+    .label .rval { color: var(--accent); font-family: monospace; font-weight: 700; }
+
+    /* ── Inputs ── */
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-sm);
+      font-size: 13px;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    textarea { resize: vertical; min-height: 68px; }
+    select {
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%2394a3b8' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }
+
+    /* ── Segment control ── */
+    .seg {
+      display: flex;
+      background: #f1f5f9;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 3px; gap: 2px;
+      margin-bottom: 16px;
+    }
+    .seg-btn {
+      flex: 1; padding: 7px 8px;
+      border: none; border-radius: 4px;
+      background: none;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-3);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .seg-btn.active {
+      background: var(--surface); color: var(--text); font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* ── Grid ── */
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── Range ── */
+    .range-wrap { display: flex; align-items: center; gap: 0; }
+    input[type="range"] {
+      flex: 1; -webkit-appearance: none;
+      height: 4px; border-radius: 2px;
+      background: #e2e8f0; cursor: pointer; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent); cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+
+    /* ── Color control ── */
+    .color-ctrl {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-sm);
+      background: var(--surface);
+      transition: border-color 0.15s;
+    }
+    .color-ctrl:focus-within { border-color: var(--accent); }
+    input[type="color"] {
+      width: 28px; height: 24px;
+      border: none; background: none; padding: 0;
+      cursor: pointer; border-radius: 4px; flex-shrink: 0;
+    }
+    .hex-in {
+      border: none !important; padding: 0 !important; box-shadow: none !important;
+      width: 72px; font-family: monospace; font-size: 13px; font-weight: 500;
+      color: var(--text); background: transparent;
+    }
+    .hex-in:focus { color: var(--accent); }
+    .grad-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+
+    /* ── Grad toggle ── */
+    .grad-tog {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 500; color: var(--text-2);
+      cursor: pointer; margin-bottom: 10px; user-select: none;
+    }
+    .grad-tog input { accent-color: var(--accent); cursor: pointer; }
+    .grad-tog:hover { color: var(--text); }
+
+    /* ── Toggle switch ── */
+    .trow {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-top: 1px solid #f1f5f9;
+    }
+    .trow:first-child { border-top: none; padding-top: 0; }
+    .tlabel { font-size: 13px; font-weight: 500; }
+    .tdesc { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+    .sw { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .sw input { opacity: 0; width: 0; height: 0; }
+    .sw-t {
+      position: absolute; inset: 0;
+      background: #cbd5e1; border-radius: 10px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .sw-t::before {
+      content: ''; position: absolute;
+      width: 14px; height: 14px; left: 3px; top: 3px;
+      background: white; border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .sw input:checked + .sw-t { background: var(--accent); }
+    .sw input:checked + .sw-t::before { transform: translateX(16px); }
+
+    /* ── Dot style picker ── */
+    .dot-picker {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+      margin-bottom: 14px;
+    }
+    .dot-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 9px 4px;
+      border: 1.5px solid var(--border); border-radius: var(--r-sm);
+      background: var(--surface); cursor: pointer; transition: all 0.15s;
+      font-size: 10px; font-weight: 600; color: var(--text-3);
+    }
+    .dot-btn:hover { border-color: var(--border-h); color: var(--text-2); }
+    .dot-btn.active { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+    .dot-btn svg { width: 30px; height: 30px; }
+
+    /* ── File drop ── */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--r-sm); padding: 20px;
+      text-align: center; cursor: pointer;
+      position: relative; overflow: hidden;
+      background: #fafafa; transition: all 0.15s;
+    }
+    .drop-zone:hover, .drop-zone.drag { border-color: var(--accent); background: #eff6ff; }
+    .drop-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .drop-text { font-size: 13px; color: var(--text-3); line-height: 1.5; }
+    .drop-text strong { color: var(--accent); }
+    .logo-thumb {
+      width: 60px; height: 60px; object-fit: contain;
+      border-radius: 6px; border: 1px solid var(--border);
+      background: white; margin: 10px auto 0; display: none;
+    }
+
+    /* ── Buttons ── */
+    button {
+      padding: 8px 16px;
+      border: 1.5px solid var(--border); border-radius: var(--r-sm);
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; background: var(--surface); color: var(--text);
+      transition: all 0.15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    button:hover { border-color: var(--border-h); background: #f8fafc; }
+    .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-h); border-color: var(--accent-h); }
+    .btn-danger { color: var(--red); border-color: #fca5a5; background: #fff5f5; }
+    .btn-danger:hover { background: #fee2e2; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* ── Input + button row ── */
+    .inrow { display: flex; gap: 6px; }
+    .inrow input { flex: 1; }
+
+    /* ── Pills ── */
+    .pills { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .pill {
+      padding: 3px 9px; font-size: 11px; font-weight: 600;
+      border: 1px solid var(--border); border-radius: 20px;
+      background: var(--surface); color: var(--text-2);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .pill:hover { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
+
+    /* ── Hint ── */
+    .hint {
+      font-size: 11px; color: var(--text-3);
+      background: #f8fafc; border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 8px 10px;
+      margin-top: 8px; line-height: 1.6;
+    }
+    .hint code {
+      font-family: monospace; background: #e2e8f0;
+      padding: 1px 4px; border-radius: 3px; font-size: 11px;
+    }
+
+    /* ── Status bar ── */
+    .statusbar {
+      padding: 8px 20px; font-size: 12px; color: var(--text-3);
+      border-top: 1px solid var(--border); min-height: 34px;
+      background: #f8fafc;
+    }
+    .statusbar.err { color: var(--red); }
+    .statusbar.ok { color: var(--green); }
+
+    /* ── Preset list ── */
+    .preset-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+    .preset-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border); border-radius: var(--r-sm);
+      cursor: pointer; transition: all 0.15s; background: var(--surface);
+    }
+    .preset-item:hover { border-color: var(--accent); background: #eff6ff; }
+    .preset-item.sel { border-color: var(--accent); background: #eff6ff; }
+    .preset-name { flex: 1; font-size: 13px; font-weight: 500; }
+    .preset-del {
+      padding: 2px 7px; font-size: 12px;
+      color: var(--text-3); border: none; background: none;
+      border-radius: 4px; cursor: pointer; flex-shrink: 0;
+    }
+    .preset-del:hover { color: var(--red); background: #fee2e2; border: none; }
+    .preset-empty { color: var(--text-3); font-size: 12px; text-align: center; padding: 16px 0; }
+
+    /* ── Disabled group ── */
+    .dis { opacity: 0.4; pointer-events: none; }
+
+    /* ── Preview panel ── */
+    .preview-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r); overflow: hidden;
+      position: sticky; top: 20px;
+    }
+    .preview-area {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 300px;
+      background: repeating-conic-gradient(#e9edf2 0% 25%, #f4f6f9 0% 50%) 0 0 / 20px 20px;
+      position: relative; padding: 28px;
+    }
+    #qr-container canvas, #qr-container svg {
+      border-radius: 6px; max-width: 100%;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.13);
+    }
+    .badge {
+      position: absolute; top: 10px; left: 10px;
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 20px; letter-spacing: 0.2px;
+    }
+    .badge.st { background: #dcfce7; color: #15803d; }
+    .badge.dy { background: #dbeafe; color: #1d4ed8; }
+    .badge.er { background: #fee2e2; color: var(--red); }
+
+    .export-area { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .action-btns { display: flex; gap: 8px; }
+    .action-btns .btn-primary { flex: 1; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: #0f172a; color: white;
+      padding: 10px 20px; border-radius: 8px;
+      font-size: 13px; font-weight: 500;
+      opacity: 0; transition: all 0.25s;
+      pointer-events: none; z-index: 1000; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">⬛</div>
+  <div>
+    <h1>QR Generator</h1>
+    <p>Статический &amp; динамический · Градиенты · Логотип · Пресеты</p>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ── Settings column ── -->
+  <div>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" data-tab="data">QR Код</button>
+        <button class="tab" data-tab="style">Стиль</button>
+        <button class="tab" data-tab="logo">Логотип</button>
+        <button class="tab" data-tab="presets">Пресеты</button>
+      </div>
+
+      <!-- ─ QR Код ─ -->
+      <div class="tab-pane active" id="tab-data">
+        <div class="seg">
+          <button class="seg-btn active" data-mode="static">Статический</button>
+          <button class="seg-btn" data-mode="dynamic">Динамический</button>
+        </div>
+
+        <div class="field" id="target-field">
+          <label class="label">Ссылка или текст</label>
+          <textarea id="target-data" placeholder="https://taplink.cc/твой_ник" rows="2"></textarea>
+        </div>
+
+        <!-- Dynamic section -->
+        <div id="dyn-section" class="hidden">
+          <div class="sec">Тип динамики</div>
+          <div class="seg">
+            <button class="seg-btn active" data-dmode="own">Свой редирект</button>
+            <button class="seg-btn" data-dmode="manual">Вручную</button>
+          </div>
+
+          <div id="dyn-own">
+            <div class="field">
+              <label class="label">Базовый URL редиректа</label>
+              <input type="text" id="redirect-base" placeholder="https://example.com/go/?to=">
+              <div class="pills">
+                <button class="pill" data-base="go">go/?to=</button>
+                <button class="pill" data-base="netlify">Netlify /r/</button>
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Ключ</label>
+              <select id="redirect-key">
+                <option value="telegram">telegram</option>
+                <option value="site">site</option>
+                <option value="whatsapp">whatsapp</option>
+                <option value="vk">vk</option>
+                <option value="avito">avito</option>
+                <option value="email">email</option>
+                <option value="ozon">ozon</option>
+                <option value="wb">wb</option>
+                <option value="__custom__">— Свой ключ —</option>
+              </select>
+            </div>
+            <div class="field hidden" id="redirect-key-custom-wrap">
+              <label class="label">Свой ключ</label>
+              <input type="text" id="redirect-key-custom" placeholder="my-link">
+            </div>
+            <div class="field">
+              <label class="label">URL в QR-коде</label>
+              <div class="inrow">
+                <input type="text" id="redirect-result" readonly placeholder="Заполни базовый URL выше">
+                <button class="btn-sm" id="btn-copy-redirect" title="Копировать">⎘</button>
+              </div>
+            </div>
+            <div class="hint">
+              Редактируй цель в <code>go/index.html</code> — QR переделывать не нужно.<br>
+              Работает на любом статическом хостинге.
+            </div>
+          </div>
+
+          <div id="dyn-manual" class="hidden">
+            <div class="field">
+              <label class="label">Ссылка в QR (короткая)</label>
+              <div class="inrow">
+                <input type="text" id="short-data" placeholder="https://bit.ly/...">
+                <button class="btn-sm" id="btn-copy-short" title="Копировать">⎘</button>
+              </div>
+            </div>
+            <div class="hint">Вставь готовую короткую ссылку: bit.ly, shrtco.de или свой редирект.</div>
+          </div>
+        </div>
+
+        <div class="sec" style="margin-top:18px">Параметры</div>
+        <div class="row2">
+          <div class="field">
+            <label class="label">Исправление ошибок</label>
+            <select id="error-level">
+              <option value="L">L — 7%</option>
+              <option value="M" selected>M — 15%</option>
+              <option value="Q">Q — 25%</option>
+              <option value="H">H — 30%</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label">Размер — <span class="rval" id="qr-size-val">300px</span></label>
+            <div class="range-wrap"><input type="range" id="qr-size" min="150" max="800" step="25" value="300"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Тихая зона — <span class="rval" id="qr-margin-val">0px</span></label>
+          <div class="range-wrap"><input type="range" id="qr-margin" min="0" max="50" step="2" value="0"></div>
+        </div>
+      </div>
+
+      <!-- ─ Стиль ─ -->
+      <div class="tab-pane" id="tab-style">
+
+        <div class="sec">Стиль точек</div>
+        <div class="dot-picker" id="dot-picker">
+          <button class="dot-btn active" data-val="rounded">
+            <svg viewBox="0 0 30 30" fill="none"><rect x="2" y="2" width="10" height="10" rx="4" fill="currentColor"/><rect x="18" y="2" width="10" height="10" rx="4" fill="currentColor"/><rect x="2" y="18" width="10" height="10" rx="4" fill="currentColor"/><rect x="18" y="18" width="10" height="10" rx="4" fill="currentColor"/></svg>
+            Скруглённые
+          </button>
+          <button class="dot-btn" data-val="dots">
+            <svg viewBox="0 0 30 30" fill="none"><circle cx="7" cy="7" r="5" fill="currentColor"/><circle cx="23" cy="7" r="5" fill="currentColor"/><circle cx="7" cy="23" r="5" fill="currentColor"/><circle cx="23" cy="23" r="5" fill="currentColor"/></svg>
+            Круги
+          </button>
+          <button class="dot-btn" data-val="square">
+            <svg viewBox="0 0 30 30" fill="none"><rect x="2" y="2" width="10" height="10" fill="currentColor"/><rect x="18" y="2" width="10" height="10" fill="currentColor"/><rect x="2" y="18" width="10" height="10" fill="currentColor"/><rect x="18" y="18" width="10" height="10" fill="currentColor"/></svg>
+            Квадраты
+          </button>
+          <button class="dot-btn" data-val="classy">
+            <svg viewBox="0 0 30 30" fill="none"><rect x="2" y="2" width="10" height="10" rx="1" fill="currentColor"/><rect x="18" y="2" width="10" height="10" rx="1" fill="currentColor"/><rect x="2" y="18" width="10" height="10" rx="1" fill="currentColor"/><rect x="18" y="18" width="10" height="10" rx="1" fill="currentColor"/></svg>
+            Classy
+          </button>
+          <button class="dot-btn" data-val="classy-rounded">
+            <svg viewBox="0 0 30 30" fill="none"><rect x="2" y="2" width="10" height="10" rx="3" fill="currentColor"/><rect x="18" y="2" width="10" height="10" rx="3" fill="currentColor"/><rect x="2" y="18" width="10" height="10" rx="3" fill="currentColor"/><rect x="18" y="18" width="10" height="10" rx="3" fill="currentColor"/></svg>
+            Classy+
+          </button>
+          <button class="dot-btn" data-val="extra-rounded">
+            <svg viewBox="0 0 30 30" fill="none"><rect x="2" y="2" width="10" height="10" rx="5" fill="currentColor"/><rect x="18" y="2" width="10" height="10" rx="5" fill="currentColor"/><rect x="2" y="18" width="10" height="10" rx="5" fill="currentColor"/><rect x="18" y="18" width="10" height="10" rx="5" fill="currentColor"/></svg>
+            Макс.
+          </button>
+        </div>
+
+        <label class="grad-tog"><input type="checkbox" id="use-grad-dots"> Градиент для точек</label>
+        <div id="dots-solid" class="field">
+          <label class="label">Цвет точек</label>
+          <div class="color-ctrl"><input type="color" id="dots-c" value="#000000"><input class="hex-in" id="dots-c-hex" value="#000000" maxlength="7"></div>
+        </div>
+        <div id="dots-grad" class="hidden">
+          <div class="grad-cols">
+            <div class="field"><label class="label">Цвет 1</label><div class="color-ctrl"><input type="color" id="dots-g1" value="#6366f1"><input class="hex-in" id="dots-g1-hex" value="#6366f1" maxlength="7"></div></div>
+            <div class="field"><label class="label">Цвет 2</label><div class="color-ctrl"><input type="color" id="dots-g2" value="#ec4899"><input class="hex-in" id="dots-g2-hex" value="#ec4899" maxlength="7"></div></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label class="label">Тип</label><select id="dots-gtype"><option value="linear">Линейный</option><option value="radial">Радиальный</option></select></div>
+            <div class="field"><label class="label">Угол — <span class="rval" id="dots-ga-val">45°</span></label><div class="range-wrap"><input type="range" id="dots-ga" min="0" max="355" step="5" value="45"></div></div>
+          </div>
+        </div>
+
+        <div class="sec">Угловые маркеры</div>
+        <div class="row2">
+          <div class="field">
+            <label class="label">Внешний квадрат</label>
+            <select id="cs-type">
+              <option value="square" selected>Квадрат</option>
+              <option value="extra-rounded">Скруглённый</option>
+              <option value="dot">Круг</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label">Внутренняя точка</label>
+            <select id="cd-type">
+              <option value="dot" selected>Круг</option>
+              <option value="square">Квадрат</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="grad-tog"><input type="checkbox" id="use-grad-cs"> Градиент — внешний квадрат</label>
+        <div id="cs-solid" class="field">
+          <label class="label">Цвет внешнего квадрата</label>
+          <div class="color-ctrl"><input type="color" id="cs-c" value="#000000"><input class="hex-in" id="cs-c-hex" value="#000000" maxlength="7"></div>
+        </div>
+        <div id="cs-grad" class="hidden">
+          <div class="grad-cols">
+            <div class="field"><label class="label">Цвет 1</label><div class="color-ctrl"><input type="color" id="cs-g1" value="#6366f1"><input class="hex-in" id="cs-g1-hex" value="#6366f1" maxlength="7"></div></div>
+            <div class="field"><label class="label">Цвет 2</label><div class="color-ctrl"><input type="color" id="cs-g2" value="#ec4899"><input class="hex-in" id="cs-g2-hex" value="#ec4899" maxlength="7"></div></div>
+          </div>
+          <div class="row2">
+            <div class="field"><label class="label">Тип</label><select id="cs-gtype"><option value="linear">Линейный</option><option value="radial">Радиальный</option></select></div>
+            <div class="field"><label class="label">Угол — <span class="rval" id="cs-ga-val">45°</span></label><div class="range-wrap"><input type="range" id="cs-ga" min="0" max="355" step="5" value="45"></div></div>
+          </div>
+        </div>
+
+        <div class="trow">
+          <div><div class="tlabel">Внутренняя точка = цвет внешнего</div></div>
+          <label class="sw"><input type="checkbox" id="sync-cd"><span class="sw-t"></span></label>
+        </div>
+        <div id="cd-controls" style="margin-top:10px">
+          <label class="grad-tog"><input type="checkbox" id="use-grad-cd"> Градиент — внутренняя точка</label>
+          <div id="cd-solid" class="field">
+            <label class="label">Цвет внутренней точки</label>
+            <div class="color-ctrl"><input type="color" id="cd-c" value="#000000"><input class="hex-in" id="cd-c-hex" value="#000000" maxlength="7"></div>
+          </div>
+          <div id="cd-grad" class="hidden">
+            <div class="grad-cols">
+              <div class="field"><label class="label">Цвет 1</label><div class="color-ctrl"><input type="color" id="cd-g1" value="#6366f1"><input class="hex-in" id="cd-g1-hex" value="#6366f1" maxlength="7"></div></div>
+              <div class="field"><label class="label">Цвет 2</label><div class="color-ctrl"><input type="color" id="cd-g2" value="#ec4899"><input class="hex-in" id="cd-g2-hex" value="#ec4899" maxlength="7"></div></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label class="label">Тип</label><select id="cd-gtype"><option value="linear">Линейный</option><option value="radial">Радиальный</option></select></div>
+              <div class="field"><label class="label">Угол — <span class="rval" id="cd-ga-val">45°</span></label><div class="range-wrap"><input type="range" id="cd-ga" min="0" max="355" step="5" value="45"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sec">Фон</div>
+        <div class="trow" style="border-top:none;padding-top:0;margin-bottom:12px">
+          <div>
+            <div class="tlabel">Прозрачный фон</div>
+            <div class="tdesc">PNG, SVG, WebP поддерживают прозрачность</div>
+          </div>
+          <label class="sw"><input type="checkbox" id="bg-transparent"><span class="sw-t"></span></label>
+        </div>
+        <div id="bg-color-controls">
+          <label class="grad-tog"><input type="checkbox" id="use-grad-bg"> Градиент фона</label>
+          <div id="bg-solid" class="field">
+            <label class="label">Цвет фона</label>
+            <div class="color-ctrl"><input type="color" id="bg-c" value="#ffffff"><input class="hex-in" id="bg-c-hex" value="#ffffff" maxlength="7"></div>
+          </div>
+          <div id="bg-grad" class="hidden">
+            <div class="grad-cols">
+              <div class="field"><label class="label">Цвет 1</label><div class="color-ctrl"><input type="color" id="bg-g1" value="#ffffff"><input class="hex-in" id="bg-g1-hex" value="#ffffff" maxlength="7"></div></div>
+              <div class="field"><label class="label">Цвет 2</label><div class="color-ctrl"><input type="color" id="bg-g2" value="#e0e7ff"><input class="hex-in" id="bg-g2-hex" value="#e0e7ff" maxlength="7"></div></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label class="label">Тип</label><select id="bg-gtype"><option value="linear">Линейный</option><option value="radial">Радиальный</option></select></div>
+              <div class="field"><label class="label">Угол — <span class="rval" id="bg-ga-val">135°</span></label><div class="range-wrap"><input type="range" id="bg-ga" min="0" max="355" step="5" value="135"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─ Логотип ─ -->
+      <div class="tab-pane" id="tab-logo">
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="logo-input" accept="image/*">
+          <div class="drop-text"><strong>Кликни</strong> или перетащи изображение</div>
+          <img id="logo-preview" class="logo-thumb">
+        </div>
+        <button class="btn-sm btn-danger" id="btn-remove-logo" style="display:none;margin-top:8px">Удалить логотип</button>
+
+        <div class="sec" style="margin-top:16px">Настройки</div>
+        <div class="field">
+          <label class="label">Размер — <span class="rval" id="logo-size-val">0.35</span></label>
+          <div class="range-wrap"><input type="range" id="logo-size" min="0.1" max="0.6" step="0.05" value="0.35"></div>
+        </div>
+        <div class="field">
+          <label class="label">Отступ — <span class="rval" id="logo-margin-val">10px</span></label>
+          <div class="range-wrap"><input type="range" id="logo-margin" min="0" max="30" step="1" value="10"></div>
+        </div>
+        <div class="trow">
+          <div>
+            <div class="tlabel">Скрывать точки за логотипом</div>
+            <div class="tdesc">Улучшает читаемость QR-кода</div>
+          </div>
+          <label class="sw"><input type="checkbox" id="logo-hide-bg" checked><span class="sw-t"></span></label>
+        </div>
+        <div class="hint" style="margin-top:12px">
+          При использовании логотипа рекомендуется уровень коррекции <strong>H (30%)</strong> — он устанавливается автоматически.
+        </div>
+      </div>
+
+      <!-- ─ Пресеты ─ -->
+      <div class="tab-pane" id="tab-presets">
+        <div class="field">
+          <label class="label">Сохранить текущие настройки как пресет</label>
+          <div class="inrow">
+            <input type="text" id="preset-name" placeholder="Название пресета...">
+            <button class="btn-primary btn-sm" id="btn-save-preset">Сохранить</button>
+          </div>
+        </div>
+
+        <div class="sec">Мои пресеты</div>
+        <div id="preset-list" class="preset-list">
+          <div class="preset-empty">Пока нет сохранённых пресетов</div>
+        </div>
+
+        <div class="sec">Импорт / Экспорт JSON</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sm" id="btn-export-cfg" style="flex:1">⬇ Экспорт</button>
+          <button class="btn-sm" id="btn-import-cfg" style="flex:1">⬆ Импорт</button>
+          <input type="file" id="import-file" accept=".json" style="display:none">
+        </div>
+      </div>
+
+      <div class="statusbar" id="status"></div>
+    </div>
+  </div>
+
+  <!-- ── Preview column ── -->
+  <div class="preview-col">
+    <div class="preview-card">
+      <div class="preview-area">
+        <div class="badge st" id="qr-badge">Статический</div>
+        <div id="qr-container"></div>
+      </div>
+      <div class="export-area">
+        <div class="row2">
+          <div class="field">
+            <label class="label">Формат</label>
+            <select id="export-format">
+              <option value="png" selected>PNG</option>
+              <option value="svg">SVG</option>
+              <option value="jpeg">JPEG</option>
+              <option value="webp">WebP</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label">Имя файла</label>
+            <input type="text" id="export-name" value="qr-code">
+          </div>
+        </div>
+        <div class="action-btns">
+          <button class="btn-primary" id="btn-download">⬇ Скачать</button>
+          <button id="btn-copy">⎘ Копировать</button>
+          <button id="btn-reset">↺ Сброс</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  if (typeof QRCodeStyling === 'undefined') {
+    document.body.innerHTML = '<p style="padding:40px;color:red">Не удалось загрузить qr-code-styling-custom.js. Убедитесь, что файл находится рядом с index.html.</p>';
+    throw new Error('QRCodeStyling not loaded');
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const $ = id => document.getElementById(id);
+  const isHex = h => /^#[0-9A-Fa-f]{6}$/.test(h);
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let qrCode = null, logoDataUrl = null, timer = null;
+  let mode = 'static', dmode = 'own';
+  let selectedPreset = null;
+  let presets = JSON.parse(localStorage.getItem('qr_presets_v3') || '{}');
+
+  // ── Toast & Status ────────────────────────────────────────────────────────
+  function showStatus(msg, type) {
+    const el = $('status');
+    el.textContent = msg;
+    el.className = 'statusbar' + (type ? ' ' + type : '');
+    if (msg && type === 'ok') setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 3000);
+  }
+
+  function showToast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ── Color pairs ───────────────────────────────────────────────────────────
+  function linkPair(cId, hId) {
+    const c = $(cId), h = $(hId);
+    c.addEventListener('input', () => { h.value = c.value.toUpperCase(); go(); });
+    h.addEventListener('input', () => {
+      const v = h.value.startsWith('#') ? h.value : '#' + h.value;
+      if (isHex(v)) { c.value = v; go(); }
+    });
+    h.addEventListener('blur', () => { if (!isHex(h.value)) h.value = c.value.toUpperCase(); });
+  }
+
+  function setPair(cId, hId, val) {
+    if ($(cId)) $(cId).value = val;
+    if ($(hId)) $(hId).value = val.toUpperCase();
+  }
+
+  // ── Gradient helpers ──────────────────────────────────────────────────────
+  function toggleGrad(ckId, sId, gId) {
+    const on = $(ckId).checked;
+    $(sId).classList.toggle('hidden', on);
+    $(gId).classList.toggle('hidden', !on);
+  }
+
+  function buildGrad(typeId, angleId, c1Id, c2Id) {
+    const t = $(typeId).value, a = Number($(angleId).value);
+    return {
+      type: t,
+      rotation: t === 'linear' ? a * Math.PI / 180 : 0,
+      colorStops: [{ offset: 0, color: $(c1Id).value }, { offset: 1, color: $(c2Id).value }]
+    };
+  }
+
+  // ── Ranges ────────────────────────────────────────────────────────────────
+  const RANGES = [
+    ['qr-size', 'px'], ['qr-margin', 'px'], ['logo-size', ''], ['logo-margin', 'px'],
+    ['dots-ga', '°'], ['cs-ga', '°'], ['cd-ga', '°'], ['bg-ga', '°']
+  ];
+
+  function updateRanges() {
+    RANGES.forEach(([id, s]) => {
+      const el = $(id), v = $(id + '-val');
+      if (el && v) v.textContent = el.value + s;
+    });
+  }
+
+  // ── Dot style picker ──────────────────────────────────────────────────────
+  function setDotsStyle(val) {
+    document.querySelectorAll('#dot-picker .dot-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.val === val);
+    });
+  }
+
+  function getDotsStyle() {
+    return document.querySelector('#dot-picker .dot-btn.active')?.dataset.val || 'rounded';
+  }
+
+  // ── Build redirect URL ────────────────────────────────────────────────────
+  function buildRedirectUrl() {
+    const base = $('redirect-base').value.trim();
+    if (!base) { $('redirect-result').value = ''; go(); return; }
+    const keyEl = $('redirect-key');
+    const key = keyEl.value === '__custom__'
+      ? $('redirect-key-custom').value.trim()
+      : keyEl.value;
+    $('redirect-result').value = base + key;
+    go();
+  }
+
+  // ── Get QR config ─────────────────────────────────────────────────────────
+  function getConfig() {
+    let dots = { type: getDotsStyle() };
+    if ($('use-grad-dots').checked) { dots.gradient = buildGrad('dots-gtype', 'dots-ga', 'dots-g1', 'dots-g2'); }
+    else { dots.color = $('dots-c').value; dots.gradient = undefined; }
+
+    let cs = { type: $('cs-type').value };
+    if ($('use-grad-cs').checked) { cs.gradient = buildGrad('cs-gtype', 'cs-ga', 'cs-g1', 'cs-g2'); }
+    else { cs.color = $('cs-c').value; cs.gradient = undefined; }
+
+    let cd = { type: $('cd-type').value };
+    if ($('sync-cd').checked) {
+      if ($('use-grad-cs').checked) { cd.gradient = cs.gradient; cd.color = undefined; }
+      else { cd.color = cs.color; cd.gradient = undefined; }
+    } else if ($('use-grad-cd').checked) {
+      cd.gradient = buildGrad('cd-gtype', 'cd-ga', 'cd-g1', 'cd-g2'); cd.color = undefined;
+    } else {
+      cd.color = $('cd-c').value; cd.gradient = undefined;
+    }
+
+    let bg = {};
+    if ($('bg-transparent').checked) { bg.color = 'rgba(0,0,0,0)'; bg.gradient = undefined; }
+    else if ($('use-grad-bg').checked) { bg.gradient = buildGrad('bg-gtype', 'bg-ga', 'bg-g1', 'bg-g2'); bg.color = undefined; }
+    else { bg.color = $('bg-c').value; bg.gradient = undefined; }
+
+    const target = $('target-data').value.trim() || 'https://example.com';
+    let dynUrl = '';
+    if (mode === 'dynamic') {
+      dynUrl = dmode === 'own'
+        ? $('redirect-result').value.trim()
+        : $('short-data').value.trim();
+    }
+
+    return {
+      width: Number($('qr-size').value) || 300,
+      height: Number($('qr-size').value) || 300,
+      type: 'canvas',
+      data: dynUrl || target,
+      margin: Number($('qr-margin').value) || 0,
+      dotsOptions: dots,
+      backgroundOptions: bg,
+      cornersSquareOptions: cs,
+      cornersDotOptions: cd,
+      image: logoDataUrl || undefined,
+      imageOptions: {
+        crossOrigin: 'anonymous',
+        margin: Number($('logo-margin').value),
+        imageSize: Number($('logo-size').value),
+        hideBackgroundDots: $('logo-hide-bg').checked
+      },
+      qrOptions: { errorCorrectionLevel: $('error-level').value }
+    };
+  }
+
+  function updateQR() {
+    const cfg = getConfig(), badge = $('qr-badge');
+    if (!cfg.data || cfg.data.length < 3) {
+      badge.textContent = 'Введите данные';
+      badge.className = 'badge er';
+      return;
+    }
+    try {
+      qrCode.update(cfg);
+      badge.textContent = mode === 'dynamic' ? 'Динамический' : 'Статический';
+      badge.className = 'badge ' + (mode === 'dynamic' ? 'dy' : 'st');
+      showStatus('');
+    } catch (e) {
+      badge.textContent = 'Ошибка';
+      badge.className = 'badge er';
+      showStatus('Ошибка: ' + e.message, 'err');
+    }
+  }
+
+  function go() { clearTimeout(timer); timer = setTimeout(updateQR, 100); }
+
+  // ── Apply config to UI ────────────────────────────────────────────────────
+  function applyToUI(cfg) {
+    const v = (id, val) => { const el = $(id); if (el && val !== undefined) el.value = val; };
+
+    v('target-data', cfg.data || '');
+    setDotsStyle(cfg.dotsOptions?.type || 'rounded');
+    v('error-level', cfg.qrOptions?.errorCorrectionLevel || 'M');
+    v('cs-type', cfg.cornersSquareOptions?.type || 'square');
+    v('cd-type', cfg.cornersDotOptions?.type || 'dot');
+    v('qr-size', cfg.width || 300);
+    v('qr-margin', cfg.margin ?? 0);
+    v('logo-size', cfg.imageOptions?.imageSize || 0.35);
+    v('logo-margin', cfg.imageOptions?.margin ?? 10);
+    if (cfg.imageOptions?.hideBackgroundDots !== undefined)
+      $('logo-hide-bg').checked = cfg.imageOptions.hideBackgroundDots;
+
+    function restoreColor(ckId, sId, gId, cId, hId, g1Id, g1hId, g2Id, g2hId, gtId, gaId, gaVId, grad, solid) {
+      $(ckId).checked = !!grad;
+      toggleGrad(ckId, sId, gId);
+      if (grad) {
+        setPair(g1Id, g1hId, grad.colorStops?.[0]?.color || '#6366f1');
+        setPair(g2Id, g2hId, grad.colorStops?.[1]?.color || '#ec4899');
+        v(gtId, grad.type || 'linear');
+        const deg = Math.round((grad.rotation || 0) * 180 / Math.PI);
+        v(gaId, deg);
+        const gaV = $(gaVId); if (gaV) gaV.textContent = deg + '°';
+      } else {
+        setPair(cId, hId, solid || '#000000');
+      }
+    }
+
+    restoreColor('use-grad-dots', 'dots-solid', 'dots-grad', 'dots-c', 'dots-c-hex',
+      'dots-g1', 'dots-g1-hex', 'dots-g2', 'dots-g2-hex', 'dots-gtype', 'dots-ga', 'dots-ga-val',
+      cfg.dotsOptions?.gradient, cfg.dotsOptions?.color);
+    restoreColor('use-grad-cs', 'cs-solid', 'cs-grad', 'cs-c', 'cs-c-hex',
+      'cs-g1', 'cs-g1-hex', 'cs-g2', 'cs-g2-hex', 'cs-gtype', 'cs-ga', 'cs-ga-val',
+      cfg.cornersSquareOptions?.gradient, cfg.cornersSquareOptions?.color);
+    restoreColor('use-grad-cd', 'cd-solid', 'cd-grad', 'cd-c', 'cd-c-hex',
+      'cd-g1', 'cd-g1-hex', 'cd-g2', 'cd-g2-hex', 'cd-gtype', 'cd-ga', 'cd-ga-val',
+      cfg.cornersDotOptions?.gradient, cfg.cornersDotOptions?.color);
+
+    const isBgTransparent = cfg.backgroundOptions?.color === 'rgba(0,0,0,0)';
+    $('bg-transparent').checked = isBgTransparent;
+    $('bg-color-controls').classList.toggle('dis', isBgTransparent);
+    if (!isBgTransparent) {
+      restoreColor('use-grad-bg', 'bg-solid', 'bg-grad', 'bg-c', 'bg-c-hex',
+        'bg-g1', 'bg-g1-hex', 'bg-g2', 'bg-g2-hex', 'bg-gtype', 'bg-ga', 'bg-ga-val',
+        cfg.backgroundOptions?.gradient, cfg.backgroundOptions?.color || '#ffffff');
+    }
+
+    updateRanges();
+  }
+
+  // ── Preset list ───────────────────────────────────────────────────────────
+  function renderPresets() {
+    const list = $('preset-list');
+    const names = Object.keys(presets);
+    if (!names.length) {
+      list.innerHTML = '<div class="preset-empty">Пока нет сохранённых пресетов</div>';
+      return;
+    }
+    list.innerHTML = names.map(name => `
+      <div class="preset-item${name === selectedPreset ? ' sel' : ''}" data-preset="${name}">
+        <span class="preset-name">${name}</span>
+        <button class="preset-del" data-del="${name}" title="Удалить">✕</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('.preset-item').forEach(item => {
+      item.addEventListener('click', e => {
+        if (e.target.dataset.del) return;
+        loadPreset(item.dataset.preset);
+      });
+    });
+    list.querySelectorAll('.preset-del').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const name = btn.dataset.del;
+        if (!confirm(`Удалить пресет «${name}»?`)) return;
+        delete presets[name];
+        localStorage.setItem('qr_presets_v3', JSON.stringify(presets));
+        if (selectedPreset === name) selectedPreset = null;
+        renderPresets();
+        showStatus(`Удалено: «${name}»`, 'ok');
+      });
+    });
+  }
+
+  function loadPreset(name) {
+    const cfg = presets[name]; if (!cfg) return;
+    selectedPreset = name;
+    applyToUI(cfg);
+
+    logoDataUrl = cfg._logo || null;
+    const prev = $('logo-preview'), rem = $('btn-remove-logo');
+    if (logoDataUrl) { prev.src = logoDataUrl; prev.style.display = 'block'; rem.style.display = ''; }
+    else { prev.style.display = 'none'; rem.style.display = 'none'; }
+
+    if (cfg._mode) {
+      mode = cfg._mode;
+      document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+      $('dyn-section').classList.toggle('hidden', mode !== 'dynamic');
+    }
+    if (cfg._dmode) {
+      dmode = cfg._dmode;
+      document.querySelectorAll('[data-dmode]').forEach(b => b.classList.toggle('active', b.dataset.dmode === dmode));
+      $('dyn-own').classList.toggle('hidden', dmode !== 'own');
+      $('dyn-manual').classList.toggle('hidden', dmode !== 'manual');
+    }
+    if (cfg._redirectBase) {
+      $('redirect-base').value = cfg._redirectBase;
+      localStorage.setItem('qr_redirect_base', cfg._redirectBase);
+    }
+    if (cfg._redirectKey) {
+      const known = ['telegram','site','whatsapp','vk','avito','email','ozon','wb'];
+      const isCustom = !known.includes(cfg._redirectKey);
+      $('redirect-key').value = isCustom ? '__custom__' : cfg._redirectKey;
+      $('redirect-key-custom-wrap').classList.toggle('hidden', !isCustom);
+      if (isCustom) $('redirect-key-custom').value = cfg._redirectKey;
+    }
+
+    renderPresets();
+    buildRedirectUrl();
+    setTimeout(updateQR, 50);
+    showStatus(`Пресет «${name}» загружен`, 'ok');
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  function init() {
+    qrCode = new QRCodeStyling({
+      width: 300, height: 300, type: 'canvas', data: 'https://example.com',
+      dotsOptions: { type: 'rounded', color: '#000000' },
+      backgroundOptions: { color: '#ffffff' },
+      cornersSquareOptions: { type: 'square', color: '#000000' },
+      cornersDotOptions: { type: 'dot', color: '#000000' },
+      imageOptions: { crossOrigin: 'anonymous', margin: 10, imageSize: 0.35, hideBackgroundDots: true },
+      qrOptions: { errorCorrectionLevel: 'M' }
+    });
+    qrCode.append($('qr-container'));
+    renderPresets();
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      $('tab-' + tab.dataset.tab).classList.add('active');
+    }));
+
+    // Mode (static / dynamic)
+    document.querySelectorAll('[data-mode]').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active'); mode = btn.dataset.mode;
+      $('dyn-section').classList.toggle('hidden', mode !== 'dynamic');
+      go();
+    }));
+
+    // Dmode (own / manual)
+    document.querySelectorAll('[data-dmode]').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-dmode]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active'); dmode = btn.dataset.dmode;
+      $('dyn-own').classList.toggle('hidden', dmode !== 'own');
+      $('dyn-manual').classList.toggle('hidden', dmode !== 'manual');
+      go();
+    }));
+
+    // Redirect URL builder
+    $('redirect-base').addEventListener('input', () => {
+      localStorage.setItem('qr_redirect_base', $('redirect-base').value);
+      buildRedirectUrl();
+    });
+    $('redirect-key').addEventListener('change', () => {
+      $('redirect-key-custom-wrap').classList.toggle('hidden', $('redirect-key').value !== '__custom__');
+      buildRedirectUrl();
+    });
+    $('redirect-key-custom').addEventListener('input', buildRedirectUrl);
+
+    document.querySelectorAll('[data-base]').forEach(btn => btn.addEventListener('click', () => {
+      const saved = localStorage.getItem('qr_redirect_base') || '';
+      $('redirect-base').value = btn.dataset.base === 'go'
+        ? 'https://link.puerrito.ru/go.html?to='
+        : (saved.includes('netlify') ? saved : 'https://your-site.netlify.app/r/');
+      localStorage.setItem('qr_redirect_base', $('redirect-base').value);
+      buildRedirectUrl();
+    }));
+
+    $('btn-copy-redirect').addEventListener('click', () => {
+      const v = $('redirect-result').value;
+      if (!v) return showStatus('URL ещё не сформирован', 'err');
+      navigator.clipboard.writeText(v);
+      showToast('URL скопирован');
+    });
+
+    $('btn-copy-short').addEventListener('click', () => {
+      const v = $('short-data').value;
+      if (!v) return showStatus('Поле пустое', 'err');
+      navigator.clipboard.writeText(v);
+      showToast('Ссылка скопирована');
+    });
+
+    const savedBase = localStorage.getItem('qr_redirect_base');
+    if (savedBase) { $('redirect-base').value = savedBase; buildRedirectUrl(); }
+
+    // Color pairs
+    [
+      ['dots-c','dots-c-hex'], ['dots-g1','dots-g1-hex'], ['dots-g2','dots-g2-hex'],
+      ['cs-c','cs-c-hex'],     ['cs-g1','cs-g1-hex'],     ['cs-g2','cs-g2-hex'],
+      ['cd-c','cd-c-hex'],     ['cd-g1','cd-g1-hex'],     ['cd-g2','cd-g2-hex'],
+      ['bg-c','bg-c-hex'],     ['bg-g1','bg-g1-hex'],     ['bg-g2','bg-g2-hex']
+    ].forEach(([c, h]) => linkPair(c, h));
+
+    // Gradient toggles
+    [
+      ['use-grad-dots', 'dots-solid', 'dots-grad'],
+      ['use-grad-cs',   'cs-solid',   'cs-grad'],
+      ['use-grad-cd',   'cd-solid',   'cd-grad'],
+      ['use-grad-bg',   'bg-solid',   'bg-grad']
+    ].forEach(([ck, s, g]) => {
+      $(ck).addEventListener('change', () => { toggleGrad(ck, s, g); go(); });
+    });
+
+    // Sync corner dot to outer square
+    $('sync-cd').addEventListener('change', e => {
+      $('cd-controls').classList.toggle('dis', e.target.checked);
+      go();
+    });
+
+    // Dot style picker
+    document.querySelectorAll('#dot-picker .dot-btn').forEach(btn => {
+      btn.addEventListener('click', () => { setDotsStyle(btn.dataset.val); go(); });
+    });
+
+    // Selects
+    ['cs-type','cd-type','error-level','dots-gtype','cs-gtype','cd-gtype','bg-gtype']
+      .forEach(id => $(id).addEventListener('change', go));
+
+    // Ranges
+    RANGES.forEach(([id, s]) => {
+      const el = $(id); if (!el) return;
+      el.addEventListener('input', e => {
+        const v = $(id + '-val'); if (v) v.textContent = e.target.value + s;
+        go();
+      });
+    });
+
+    // Text inputs
+    $('target-data').addEventListener('input', go);
+    $('short-data').addEventListener('input', go);
+    $('logo-hide-bg').addEventListener('change', go);
+
+    // Transparent background
+    $('bg-transparent').addEventListener('change', e => {
+      $('bg-color-controls').classList.toggle('dis', e.target.checked);
+      go();
+    });
+
+    // Logo upload
+    const dz = $('drop-zone'), fi = $('logo-input'), prev = $('logo-preview'), rem = $('btn-remove-logo');
+    ['dragenter','dragover'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.add('drag'); }));
+    ['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.remove('drag'); }));
+
+    const handleFile = file => {
+      if (!file || !file.type.startsWith('image/')) return showStatus('Только изображения', 'err');
+      const reader = new FileReader();
+      reader.onload = ev => {
+        logoDataUrl = ev.target.result;
+        prev.src = logoDataUrl; prev.style.display = 'block'; rem.style.display = '';
+        if ($('error-level').value !== 'H') $('error-level').value = 'H';
+        go(); showStatus('Логотип загружен · Коррекция → H', 'ok');
+      };
+      reader.readAsDataURL(file);
+    };
+    dz.addEventListener('drop', e => handleFile(e.dataTransfer.files[0]));
+    fi.addEventListener('change', e => handleFile(e.target.files[0]));
+    rem.addEventListener('click', () => {
+      logoDataUrl = null; prev.style.display = 'none'; rem.style.display = 'none'; fi.value = ''; go();
+    });
+
+    // Download
+    $('btn-download').addEventListener('click', () => {
+      const ext = $('export-format').value, name = $('export-name').value.trim() || 'qr-code';
+      qrCode.download({ name, extension: ext });
+      showToast(`Сохранено: ${name}.${ext}`);
+    });
+
+    // Copy to clipboard
+    $('btn-copy').addEventListener('click', async () => {
+      try {
+        const blob = await qrCode.getRawData('png');
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast('Скопировано (PNG)');
+      } catch { showStatus('Копирование требует HTTPS или localhost', 'err'); }
+    });
+
+    // Reset
+    $('btn-reset').addEventListener('click', () => {
+      if (!confirm('Сбросить все настройки?')) return;
+      logoDataUrl = null;
+      $('logo-preview').style.display = 'none'; $('btn-remove-logo').style.display = 'none';
+      $('logo-input').value = ''; $('target-data').value = '';
+      $('short-data').value = ''; $('redirect-result').value = '';
+      $('redirect-key').value = 'telegram'; $('redirect-key-custom').value = '';
+      $('redirect-key-custom-wrap').classList.add('hidden');
+
+      mode = 'static'; dmode = 'own';
+      document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === 'static'));
+      document.querySelectorAll('[data-dmode]').forEach(b => b.classList.toggle('active', b.dataset.dmode === 'own'));
+      $('dyn-own').classList.remove('hidden'); $('dyn-manual').classList.add('hidden');
+      $('dyn-section').classList.add('hidden');
+
+      ['use-grad-dots','use-grad-cs','use-grad-cd','use-grad-bg','sync-cd','bg-transparent']
+        .forEach(id => $(id).checked = false);
+      $('bg-color-controls').classList.remove('dis');
+      $('cd-controls').classList.remove('dis');
+      $('logo-hide-bg').checked = true;
+
+      [['use-grad-dots','dots-solid','dots-grad'],['use-grad-cs','cs-solid','cs-grad'],
+       ['use-grad-cd','cd-solid','cd-grad'],['use-grad-bg','bg-solid','bg-grad']]
+        .forEach(([ck, s, g]) => toggleGrad(ck, s, g));
+
+      setPair('dots-c','dots-c-hex','#000000'); setPair('cs-c','cs-c-hex','#000000');
+      setPair('cd-c','cd-c-hex','#000000');     setPair('bg-c','bg-c-hex','#ffffff');
+      ['dots-g1','cs-g1','cd-g1'].forEach(id => setPair(id, id+'-hex', '#6366f1'));
+      ['dots-g2','cs-g2','cd-g2'].forEach(id => setPair(id, id+'-hex', '#ec4899'));
+      setPair('bg-g1','bg-g1-hex','#ffffff'); setPair('bg-g2','bg-g2-hex','#e0e7ff');
+
+      setDotsStyle('rounded');
+      $('cs-type').value = 'square'; $('cd-type').value = 'dot';
+      $('error-level').value = 'M'; $('export-format').value = 'png';
+      $('qr-size').value = '300'; $('qr-margin').value = '0';
+      $('logo-size').value = '0.35'; $('logo-margin').value = '10';
+      ['dots-ga','cs-ga','cd-ga'].forEach(id => $(id).value = '45');
+      $('bg-ga').value = '135';
+
+      updateRanges(); updateQR();
+      showStatus('Настройки сброшены', 'ok');
+    });
+
+    // Save preset
+    $('btn-save-preset').addEventListener('click', () => {
+      const name = $('preset-name').value.trim();
+      if (!name) return showStatus('Введите название пресета', 'err');
+      if (name.length > 50) return showStatus('Название слишком длинное (макс. 50 символов)', 'err');
+      const cfg = getConfig();
+      cfg._logo = logoDataUrl; cfg._mode = mode; cfg._dmode = dmode;
+      cfg._redirectBase = $('redirect-base').value;
+      const rk = $('redirect-key').value;
+      cfg._redirectKey = rk === '__custom__' ? $('redirect-key-custom').value : rk;
+      presets[name] = cfg;
+      localStorage.setItem('qr_presets_v3', JSON.stringify(presets));
+      selectedPreset = name;
+      renderPresets();
+      $('preset-name').value = '';
+      showStatus(`Сохранено: «${name}»`, 'ok');
+    });
+
+    // Export JSON
+    $('btn-export-cfg').addEventListener('click', () => {
+      const cfg = getConfig();
+      cfg._logo = logoDataUrl; cfg._mode = mode; cfg._dmode = dmode;
+      cfg._redirectBase = $('redirect-base').value;
+      const rk = $('redirect-key').value;
+      cfg._redirectKey = rk === '__custom__' ? $('redirect-key-custom').value : rk;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(cfg, null, 2)], { type: 'application/json' }));
+      a.download = 'qr-config.json'; a.click();
+      showToast('Конфиг экспортирован');
+    });
+
+    // Import JSON
+    $('btn-import-cfg').addEventListener('click', () => $('import-file').click());
+    $('import-file').addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const cfg = JSON.parse(ev.target.result);
+          applyToUI(cfg);
+          if (cfg._logo) {
+            logoDataUrl = cfg._logo;
+            $('logo-preview').src = logoDataUrl;
+            $('logo-preview').style.display = 'block';
+            $('btn-remove-logo').style.display = '';
+          }
+          if (cfg._mode) {
+            mode = cfg._mode;
+            document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+            $('dyn-section').classList.toggle('hidden', mode !== 'dynamic');
+          }
+          if (cfg._dmode) {
+            dmode = cfg._dmode;
+            document.querySelectorAll('[data-dmode]').forEach(b => b.classList.toggle('active', b.dataset.dmode === dmode));
+            $('dyn-own').classList.toggle('hidden', dmode !== 'own');
+            $('dyn-manual').classList.toggle('hidden', dmode !== 'manual');
+          }
+          if (cfg._redirectBase) {
+            $('redirect-base').value = cfg._redirectBase;
+            localStorage.setItem('qr_redirect_base', cfg._redirectBase);
+          }
+          if (cfg._redirectKey) {
+            const known = ['telegram','site','whatsapp','vk','avito','email','ozon','wb'];
+            const isCustom = !known.includes(cfg._redirectKey);
+            $('redirect-key').value = isCustom ? '__custom__' : cfg._redirectKey;
+            $('redirect-key-custom-wrap').classList.toggle('hidden', !isCustom);
+            if (isCustom) $('redirect-key-custom').value = cfg._redirectKey;
+          }
+          buildRedirectUrl();
+          setTimeout(updateQR, 50);
+          showStatus('Конфиг импортирован', 'ok');
+        } catch { showStatus('Неверный JSON-файл', 'err'); }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    updateQR();
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

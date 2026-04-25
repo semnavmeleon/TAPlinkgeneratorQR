@@ -1,0 +1,15 @@
+# ПУЭРРИТО — редиректы для Netlify
+# QR-код ведёт на: https://твой-сайт.netlify.app/r/telegram
+# Чтобы изменить ссылку — замени URL справа и задеплой снова.
+
+/r/telegram     https://t.me/puerrito                          302
+/r/site         https://puerrito.ru                            302
+/r/whatsapp     https://wa.me/7XXXXXXXXXX                      302
+/r/vk           https://vk.com/puerrito                        302
+/r/avito        https://avito.ru/user/XXXXXXX/profile          302
+/r/email        mailto:hello@puerrito.ru                       302
+/r/ozon         https://ozon.ru/seller/XXXXXXX                 302
+/r/wb           https://wildberries.ru/brands/XXXXX            302
+
+# Всё остальное — на главный сайт
+/*              https://puerrito.ru                            302
